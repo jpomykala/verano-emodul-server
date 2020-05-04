@@ -57,11 +57,12 @@ const pushTemperatureUpdate = async (sessionCookie, targetTemperature = 20.0) =>
   }).then(response => response.data);
 }
 
-const pushThermostatState = async (sessionCookie, state) => {
+const pushThermostatState = async (sessionCookie, targetState) => {
+  //verano 1 - heating, 0 - cooling
   const requestBody = [
     {
       ido: 138,
-      params: state === 'COOLING' ? 0 : 1,
+      params: targetState === 'COOLING' ? 0 : 1,
       module_index: 0
     }
   ]
@@ -88,8 +89,10 @@ app.get('/target-state', async (req, res) => {
   const targetstate = req.query.targetstate
   const sessionCookie = await loginUser()
   try {
-    const response = await pushThermostatState(sessionCookie, targetstate === 2 ? 'COOLING' : 'HEATING');
-    console.log(`Update state to: ${targetstate}, success: ${response}`);
+    // homebridge 1 - heating, 2 - cooling
+    const homebridgeState = targetstate === 2 ? 'COOLING' : 'HEATING'
+    const response = await pushThermostatState(sessionCookie, homebridgeState);
+    console.log(`Update state to: ${homebridgeState} (${targetstate}), success: ${response}`);
     res.sendStatus(200);
   } catch (e) {
     res.sendStatus(400)
