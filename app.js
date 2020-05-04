@@ -98,10 +98,10 @@ app.get('/target-state', async (req, res) => {
   }
 });
 
-const updateState = async (accessoryId, params) => {
+const updateState = async (accessoryId, customParams) => {
   const params = {
     accessoryId,
-    ...params
+    ...customParams
   }
   const settings = JSON.parse(fs.readFileSync('settings.json'));
   return await axios.get(`${settings.homebridgeUpdateUrl}`, {params})
