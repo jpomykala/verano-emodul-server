@@ -136,13 +136,15 @@ const updateValues = async () => {
       currentstate = 0
   }
 
-  let targetstate = currentstate;
 
   await updateState('verano-temp', {currenttemperature})
+  console.log("currenttemperature:", currenttemperature);
   await updateState('verano-temp', {targettemperature})
+  console.log("targettemperature:", targettemperature);
   await updateState('verano-temp', {currentstate})
-  await updateState('verano-temp', {targetstate})
-  console.log("Update");
+  console.log("currentstate:", currentstate);
+  // await updateState('verano-temp', {targetstate})
+  // console.log("targetstate:", targetstate);
 }
 
 cron.schedule("*/5 * * * *", async () => {
