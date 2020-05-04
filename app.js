@@ -1,5 +1,6 @@
 const express = require('express');
 const axios = require('axios')
+const cron = require("node-cron")
 const fs = require('fs');
 const app = express();
 
@@ -18,22 +19,31 @@ const loginUser = async () => {
   return cookies.filter(cookie => cookie.includes('session'))[0];
 }
 
-app.post('/temperatures', async (req, res) => {
+const getTiles = async (sessionCookie) => {
+  return await axios.get('https://emodul.pl/update_data', {
+    headers: {
+      'Cookie': sessionCookie
+    }
+  }).then(response => response.data.tiles);
+};
 
+const getDesiredTemperature = async (sessionCookie) => {
+  const tiles = await getTiles(sessionCookie);
+  const temperatureTile = tiles.filter(tile => tile.id === 58)[0]
+  return temperatureTile.params.widget1.value / 10
+};
 
-  /**
-   * {
-   *   temperature: 20.5
-   * }
-   */
+const getCurrentTemperature = async (sessionCookie) => {
+  const tiles = await getTiles(sessionCookie);
+  const temperatureTile = tiles.filter(tile => tile.id === 58)[0]
+  return temperatureTile.params.widget2.value / 10;
+}
 
-  const requestedTemperature = req.body.temperature * 10
-
-  const sessionCookie = await loginUser();
+const updateTemperature = async (sessionCookie, targetTemperature = 20.0) => {
   const requestBody = [
     {
       ido: 139,
-      params: requestedTemperature,
+      params: targetTemperature * 10,
       module_index: 0
     }
   ]
@@ -42,7 +52,14 @@ app.post('/temperatures', async (req, res) => {
       'Cookie': sessionCookie
     }
   }).then(response => response.data);
+  return requestBody;
+}
 
+
+app.post('/temperatures', async (req, res) => {
+  const requestedTemperature = req.body.temperature * 10
+  const sessionCookie = await loginUser()
+  const responseBody = await updateTemperature(sessionCookie, requestedTemperature);
   if (responseBody === 1) {
     res.send('OK')
   } else {
@@ -50,22 +67,21 @@ app.post('/temperatures', async (req, res) => {
   }
 });
 
-app.get('/', async (req, res) => {
-  const sessionCookie = await loginUser();
-  const tiles = await axios.get('https://emodul.pl/update_data', {
-    headers: {
-      'Cookie': sessionCookie
-    }
-  }).then(response => response.data.tiles);
+const updateState = async (accessoryId, value) => {
+  const params = {
+    accessoryId,
+    value
+  }
+  return await axios.get(`/`, {params})
+    .then(response => response.data);
+};
 
-  const temperatureTile = tiles.filter(tile => tile.id === 58)[0]
-  const desiredTemperature = temperatureTile.params.widget1.value / 10
-  const currentTemperature = temperatureTile.params.widget2.value / 10
-  return res.send({
-    "success": true,
-    "state": currentTemperature
-  });
-})
+cron.schedule("*/5 * * * *", async () => {
+  const sessionCookie = await loginUser();
+  const currentTemperature = getCurrentTemperature(sessionCookie);
+  await updateState('verano-temp', currentTemperature)
+  console.log("Temperature:", currentTemperature);
+});
 
 app.listen(3000, () => {
   console.log('listening on 3000')
