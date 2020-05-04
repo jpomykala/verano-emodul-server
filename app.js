@@ -72,7 +72,8 @@ const updateState = async (accessoryId, value) => {
     accessoryId,
     value
   }
-  return await axios.get(`/`, {params})
+  const settings = JSON.parse(fs.readFileSync('settings.json'));
+  return await axios.get(`${settings.homebridgeUpdateUrl}`, {params})
     .then(response => response.data);
 };
 
