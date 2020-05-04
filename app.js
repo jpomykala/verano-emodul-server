@@ -84,7 +84,7 @@ const updateTemperatureStatus = async () => {
   console.log("Temperature:", currentTemperature);
 }
 
-cron.schedule("*/1 * * * *", async () => {
+cron.schedule("*/5 * * * *", async () => {
   await updateTemperatureStatus()
 });
 
