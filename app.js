@@ -6,7 +6,7 @@ const app = express();
 app.use(express.json())
 
 const loginUser = async () => {
-  const credentials = fs.readFileSync('credentials.json');
+  const credentials = JSON.parse(fs.readFileSync('credentials.json'));
   const requestBody = {
     username: credentials.username,
     password: credentials.password,
