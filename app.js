@@ -42,7 +42,7 @@ const extractMode = async (tiles) => {
   return foundTile.params.statusId === 1 ? 'COOLING' : 'HEATING'; //1 - cooling, 0 - heating
 }
 
-const updateTemperature = async (sessionCookie, targetTemperature = 20.0) => {
+const pushTemperatureUpdate = async (sessionCookie, targetTemperature = 20.0) => {
   const requestBody = [
     {
       ido: 139,
@@ -50,15 +50,14 @@ const updateTemperature = async (sessionCookie, targetTemperature = 20.0) => {
       module_index: 0
     }
   ]
-  const responseBody = await axios.post('https://emodul.pl/send_control_data', requestBody, {
+  return await axios.post('https://emodul.pl/send_control_data', requestBody, {
     headers: {
       'Cookie': sessionCookie
     }
   }).then(response => response.data);
-  return requestBody;
 }
 
-const updateThermostatState = async (sessionCookie, state) => {
+const pushThermostatState = async (sessionCookie, state) => {
   const requestBody = [
     {
       ido: 138,
@@ -66,20 +65,19 @@ const updateThermostatState = async (sessionCookie, state) => {
       module_index: 0
     }
   ]
-  const responseBody = await axios.post('https://emodul.pl/send_control_data', requestBody, {
+  return await axios.post('https://emodul.pl/send_control_data', requestBody, {
     headers: {
       'Cookie': sessionCookie
     }
   }).then(response => response.data);
-  return requestBody;
 }
 
 app.get('/target-temperature', async (req, res) => {
   const targettemperature = req.query.targettemperature
   const sessionCookie = await loginUser()
   try {
-    const responseBody = await updateTemperature(sessionCookie, targettemperature);
-    console.log(`Target temperature: ${targettemperature}, success: ${responseBody.data}`);
+    const response = await pushTemperatureUpdate(sessionCookie, targettemperature);
+    console.log(`Update target temperature to: ${targettemperature}, success: ${response}`);
     res.sendStatus(200);
   } catch (e) {
     res.sendStatus(400)
@@ -90,8 +88,8 @@ app.get('/target-state', async (req, res) => {
   const targetstate = req.query.targetstate
   const sessionCookie = await loginUser()
   try {
-    const responseBody = await updateThermostatState(sessionCookie, targetstate === 2 ? 'COOLING' : 'HEATING');
-    console.log(`Target state: ${targettemperature}, success: ${responseBody.data}`);
+    const response = await pushThermostatState(sessionCookie, targetstate === 2 ? 'COOLING' : 'HEATING');
+    console.log(`Update state to: ${targetstate}, success: ${response}`);
     res.sendStatus(200);
   } catch (e) {
     res.sendStatus(400)
