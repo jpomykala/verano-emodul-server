@@ -50,7 +50,7 @@ app.post('/temperatures', async (req, res) => {
   }
 });
 
-app.get('accessoryId', async (req, res) => {
+app.get('/', async (req, res) => {
   const sessionCookie = await loginUser();
   const tiles = await axios.get('https://emodul.pl/update_data', {
     headers: {
