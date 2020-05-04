@@ -27,16 +27,19 @@ const getTiles = async (sessionCookie) => {
   }).then(response => response.data.tiles);
 };
 
-const getDesiredTemperature = async (sessionCookie) => {
-  const tiles = await getTiles(sessionCookie);
-  const temperatureTile = tiles.filter(tile => tile.id === 58)[0]
-  return temperatureTile.params.widget1.value / 10
+const extractDesiredTemperature = async (tiles) => {
+  const foundTile = tiles.filter(tile => tile.id === 58)[0]
+  return foundTile.params.widget1.value / 10
 };
 
-const getCurrentTemperature = async (sessionCookie) => {
-  const tiles = await getTiles(sessionCookie);
-  const temperatureTile = tiles.filter(tile => tile.id === 58)[0]
-  return temperatureTile.params.widget2.value / 10;
+const extractCurrentTemperature = async (tiles) => {
+  const foundTile = tiles.filter(tile => tile.id === 58)[0]
+  return foundTile.params.widget2.value / 10;
+}
+
+const extractMode = async (tiles) => {
+  const foundTile = tiles.filter(tile => tile.id === 61)[0]
+  return foundTile.params.statusId === 1 ? 'COOLING' : 'HEATING'; //1 - cooling, 0 - heating
 }
 
 const updateTemperature = async (sessionCookie, targetTemperature = 20.0) => {
@@ -55,42 +58,90 @@ const updateTemperature = async (sessionCookie, targetTemperature = 20.0) => {
   return requestBody;
 }
 
+const updateThermostatState = async (sessionCookie, state) => {
+  const requestBody = [
+    {
+      ido: 138,
+      params: state === 'COOLING' ? 0 : 1,
+      module_index: 0
+    }
+  ]
+  const responseBody = await axios.post('https://emodul.pl/send_control_data', requestBody, {
+    headers: {
+      'Cookie': sessionCookie
+    }
+  }).then(response => response.data);
+  return requestBody;
+}
 
-app.post('/temperatures', async (req, res) => {
-  const requestedTemperature = req.body.temperature * 10
+app.get('/target-temperature', async (req, res) => {
+  const targettemperature = req.query.targettemperature
   const sessionCookie = await loginUser()
-  const responseBody = await updateTemperature(sessionCookie, requestedTemperature);
-  if (responseBody === 1) {
-    res.send('OK')
-  } else {
-    res.send('NOK')
+  try {
+    const responseBody = await updateTemperature(sessionCookie, targettemperature * 10);
+    console.log(`Target temperature: ${targettemperature}, success: ${responseBody.data}`);
+    res.sendStatus(200);
+  } catch (e) {
+    res.sendStatus(400)
   }
 });
 
-const updateState = async (accessoryId, value) => {
+app.get('/target-state', async (req, res) => {
+  const targetstate = req.query.targetstate
+  const sessionCookie = await loginUser()
+  try {
+    const responseBody = await updateThermostatState(sessionCookie, targetstate === 2 ? 'COOLING' : 'HEATING');
+    console.log(`Target state: ${targettemperature}, success: ${responseBody.data}`);
+    res.sendStatus(200);
+  } catch (e) {
+    res.sendStatus(400)
+  }
+});
+
+const updateState = async (accessoryId, params) => {
   const params = {
     accessoryId,
-    value
+    ...params
   }
   const settings = JSON.parse(fs.readFileSync('settings.json'));
   return await axios.get(`${settings.homebridgeUpdateUrl}`, {params})
     .then(response => response.data);
 };
 
-const updateTemperatureStatus = async () => {
+const updateValues = async () => {
   const sessionCookie = await loginUser();
-  const currentTemperature = await getCurrentTemperature(sessionCookie);
-  await updateState('verano-temp', currentTemperature)
-  console.log("Temperature:", currentTemperature);
+  const tiles = await getTiles(sessionCookie);
+  const currenttemperature = await extractCurrentTemperature(tiles);
+  const targettemperature = await extractDesiredTemperature(tiles);
+  const currentStateEnum = await extractMode(tiles);
+
+  let currentstate = 0;
+  switch (currentStateEnum) {
+    case "COOLING":
+      currentstate = 2
+      break;
+    case "HEATING":
+      currentstate = 1
+      break
+    default:
+      currentstate = 0
+  }
+
+  let targetstate = currentstate;
+
+  await updateState('verano-temp', {currenttemperature})
+  await updateState('verano-temp', {targettemperature})
+  await updateState('verano-temp', {currentstate})
+  await updateState('verano-temp', {targetstate})
+  console.log("Update");
 }
 
 cron.schedule("*/5 * * * *", async () => {
-  await updateTemperatureStatus()
+  await updateValues()
 });
 
 
-
 app.listen(3000, async () => {
-  await updateTemperatureStatus()
+  await updateValues()
   console.log('listening on 3000')
 })
