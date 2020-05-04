@@ -77,13 +77,20 @@ const updateState = async (accessoryId, value) => {
     .then(response => response.data);
 };
 
-cron.schedule("*/5 * * * *", async () => {
+const updateTemperatureStatus = async () => {
   const sessionCookie = await loginUser();
-  const currentTemperature = getCurrentTemperature(sessionCookie);
+  const currentTemperature = await getCurrentTemperature(sessionCookie);
   await updateState('verano-temp', currentTemperature)
   console.log("Temperature:", currentTemperature);
+}
+
+cron.schedule("*/1 * * * *", async () => {
+  await updateTemperatureStatus()
 });
 
-app.listen(3000, () => {
+
+
+app.listen(3000, async () => {
+  await updateTemperatureStatus()
   console.log('listening on 3000')
 })
