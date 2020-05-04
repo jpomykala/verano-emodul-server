@@ -75,6 +75,7 @@ const pushThermostatState = async (sessionCookie, targetState) => {
 
 app.get('/target-temperature', async (req, res) => {
   const targettemperature = req.query.targettemperature
+
   const sessionCookie = await loginUser()
   try {
     const response = await pushTemperatureUpdate(sessionCookie, targettemperature);
@@ -86,7 +87,14 @@ app.get('/target-temperature', async (req, res) => {
 });
 
 app.get('/target-state', async (req, res) => {
-  const targetstate = req.query.targetstate
+  const targetstate = Number(req.query.targetstate)
+
+  if (targetstate === 0 || targetstate === 3) {
+    console.log(`Invalid state value: ${targetstate}`)
+    res.sendStatus(400)
+    return
+  }
+
   const sessionCookie = await loginUser()
   try {
     // homebridge 1 - heating, 2 - cooling
