@@ -78,7 +78,7 @@ app.get('/target-temperature', async (req, res) => {
   const targettemperature = req.query.targettemperature
   const sessionCookie = await loginUser()
   try {
-    const responseBody = await updateTemperature(sessionCookie, targettemperature * 10);
+    const responseBody = await updateTemperature(sessionCookie, targettemperature);
     console.log(`Target temperature: ${targettemperature}, success: ${responseBody.data}`);
     res.sendStatus(200);
   } catch (e) {
