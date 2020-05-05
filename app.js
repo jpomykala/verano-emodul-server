@@ -107,7 +107,7 @@ app.get('/target-state', async (req, res) => {
   }
 });
 
-const updateState = async (accessoryId, customParams) => {
+const updateHomebridgeValue = async (accessoryId, customParams) => {
   const params = {
     accessoryId,
     ...customParams
@@ -136,18 +136,18 @@ const updateValues = async () => {
       currentstate = 0
   }
 
-
-  await updateState('verano-temp', {currenttemperature})
+  const accessoryId = 'verano-temp';
+  await updateHomebridgeValue(accessoryId, {currenttemperature})
   console.log("currenttemperature:", currenttemperature);
-  await updateState('verano-temp', {targettemperature})
+  await updateHomebridgeValue(accessoryId, {targettemperature})
   console.log("targettemperature:", targettemperature);
-  await updateState('verano-temp', {currentstate})
+  await updateHomebridgeValue(accessoryId, {currentstate})
   console.log("currentstate:", currentstate);
-  // await updateState('verano-temp', {targetstate})
+  // await updateHomebridgeValue('verano-temp', {targetstate})
   // console.log("targetstate:", targetstate);
 }
 
-cron.schedule("*/5 * * * *", async () => {
+cron.schedule("*/2 * * * *", async () => {
   await updateValues()
 });
 
