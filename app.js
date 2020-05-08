@@ -152,7 +152,7 @@ cron.schedule("*/2 * * * *", async () => {
 });
 
 
-app.listen(3000, async () => {
+app.listen(3011, async () => {
   await updateValues()
-  console.log('listening on 3000')
+  console.log('listening on 3011')
 })
