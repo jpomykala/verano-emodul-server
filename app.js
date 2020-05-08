@@ -147,7 +147,7 @@ const updateValues = async () => {
   // console.log("targetstate:", targetstate);
 }
 
-cron.schedule("*/2 * * * *", async () => {
+cron.schedule("*/15 * * * *", async () => {
   await updateValues()
 });
 
