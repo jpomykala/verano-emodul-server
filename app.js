@@ -14,7 +14,9 @@ const loginUser = async () => {
     rememberMe: true,
     languageId: 'en'
   };
+  console.log("Signing in");
   const loginResponse = await axios.post('https://emodul.pl/login', requestBody);
+  console.log("Login Success");
   const cookies = loginResponse.headers['set-cookie'];
   return cookies.filter(cookie => cookie.includes('session'))[0];
 }
@@ -57,7 +59,7 @@ const pushTemperatureUpdate = async (sessionCookie, targetTemperature = 20.0) =>
   }).then(response => response.data);
 }
 
-const pushThermostatState = async (sessionCookie, targetState) => {
+const pushThermostatState = async (sessionCookie, targetState = 1) => {
   //verano 1 - heating, 0 - cooling
   const requestBody = [
     {
@@ -72,6 +74,60 @@ const pushThermostatState = async (sessionCookie, targetState) => {
     }
   }).then(response => response.data);
 }
+
+//https://github.com/PJCzx/homebridge-thermostat
+/**
+ * {
+    "targetHeatingCoolingState": INT_VALUE_0_TO_3,
+    "targetTemperature": FLOAT_VALUE,
+    "currentHeatingCoolingState": INT_VALUE_0_TO_2,
+    "currentTemperature": FLOAT_VALUE
+}
+ **/
+
+let SESSION_COOKIE_TMP = "";
+let TARGET_TEMPERATURE_TMP = 18;
+
+app.get('/status', async (req, res) => {
+
+  if(SESSION_COOKIE_TMP === ""){
+    SESSION_COOKIE_TMP = await loginUser();
+  }
+  let tiles;
+  try {
+     tiles = await getTiles(SESSION_COOKIE_TMP);
+  } catch (e){
+    console.log("Could not fetch tiles", e);
+    SESSION_COOKIE_TMP = await loginUser();
+    tiles = await getTiles(SESSION_COOKIE_TMP);
+  }
+
+  const currentTemperature = await extractCurrentTemperature(tiles);
+  const targetTemperature = await extractDesiredTemperature(tiles);
+  TARGET_TEMPERATURE_TMP = targetTemperature;
+
+  const HEATING_STATE = 1;
+
+  res.send({
+    targetHeatingCoolingState: HEATING_STATE,
+    targetTemperature,
+    currentHeatingCoolingState: HEATING_STATE,
+    currentTemperature
+  })
+});
+
+app.get('/targetTemperature/:targetTemperature', async (req, res) => {
+  const targetTemperature = req.params.targetTemperature
+  try {
+    const response = await pushTemperatureUpdate(SESSION_COOKIE_TMP, targetTemperature);
+    console.log(`Update target temperature to: ${targetTemperature}, success: ${response}`);
+    TARGET_TEMPERATURE_TMP = targetTemperature;
+    res.sendStatus(200);
+  } catch (e) {
+    console.error("Error during temperature update", e);
+    res.sendStatus(400)
+  }
+});
 
 app.get('/target-temperature', async (req, res) => {
   const targettemperature = req.query.targettemperature
@@ -147,12 +203,12 @@ const updateValues = async () => {
   // console.log("targetstate:", targetstate);
 }
 
-cron.schedule("*/15 * * * *", async () => {
-  await updateValues()
-});
+// cron.sc/hedule("*/15 * * * *", async () => {
+//   await updateValues()
+// });
 
 
-app.listen(3011, async () => {
-  await updateValues()
-  console.log('listening on 3011')
+app.listen(3080, async () => {
+  // await updateValues()
+  console.log('listening on 3080')
 })
