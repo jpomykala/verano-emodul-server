@@ -108,12 +108,15 @@ app.get('/status', async (req, res) => {
 
   const HEATING_STATE = 1;
 
-  res.send({
+
+  const statusResponse = {
     targetHeatingCoolingState: HEATING_STATE,
     targetTemperature,
     currentHeatingCoolingState: HEATING_STATE,
     currentTemperature
-  })
+  };
+  console.log("Update status", statusResponse)
+  res.send(statusResponse)
 });
 
 app.get('/targetTemperature/:targetTemperature', async (req, res) => {
